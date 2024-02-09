@@ -1,20 +1,22 @@
-'use client';
+import { NavigationContainer, NavigationItem } from '@/components/Navigation';
 
-import { MainNavigation, NavigationItem } from '@/components/MainNavigation';
-
-import { HomeSection } from '@/containers/HomeSection';
+import HomeSection from '@/containers/HomeSection';
+import FullscreenCanvas from '@/containers/FullscreenCanvas';
 
 export default function Home() {
   return (
     <>
-      <MainNavigation>
+      <FullscreenCanvas />
+
+      <NavigationContainer>
         <NavigationItem label="My Projects" link="#my-projects" />
         <NavigationItem label="Skills" link="#skills" />
         <NavigationItem label="Experience" link="#experience" />
         <NavigationItem label="Support Me" link="#support-me" />
         <NavigationItem label="Contact & Policy" link="#contact-and-privacy" />
-      </MainNavigation>
+      </NavigationContainer>
 
+      <HomeSection />
       <HomeSection />
     </>
   );

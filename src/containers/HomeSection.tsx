@@ -3,7 +3,7 @@
 import { TypeAnimation } from 'react-type-animation';
 
 const HomeSection = () => (
-  <main className="flex h-full w-full items-center">
+  <main className="relative flex h-screen w-full items-center">
     <header className="flex w-full flex-col items-center justify-center text-[7vw] text-white">
       <p>
         I&apos;m&nbsp;
@@ -34,4 +34,4 @@ const HomeSection = () => (
   </main>
 );
 
-export { HomeSection };
+export default HomeSection;

@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--clr-primary)',
+        primary: 'var(--clr-accent-800)',
       },
       backgroundImage: {
         gradient:
