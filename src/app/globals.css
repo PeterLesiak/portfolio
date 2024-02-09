@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*::before,
+*,
+*::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: hsla(0, 0%, 90%, 0.5);
+}
+
+:root {
+  --clr-primary: #060606;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100vh;
+
+  background: var(--clr-primary);
+}

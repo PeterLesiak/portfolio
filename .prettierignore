@@ -1,0 +1,9 @@
+# NodeJS
+/node_modules
+package.json
+
+# npm
+package-lock.json
+
+# NextJS
+/.next
