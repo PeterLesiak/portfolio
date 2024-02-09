@@ -1,10 +1,10 @@
 {
-  "name": "my-portfolio",
+  "name": "portfolio",
   "author": "Peter Lesiak",
   "license": "GPL-3.0-only",
   "scripts": {
     "build": "next build",
-    "start": "serve@latest out -p 6969",
+    "start": "serve out -p 6969",
     "dev": "next dev --turbo -p 6969",
     "lint": "next lint",
     "format": "prettier . --write"
@@ -26,6 +26,7 @@
     "postcss": "^8",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "serve": "^14.2.1",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
   }
