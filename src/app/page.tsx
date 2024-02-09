@@ -1,6 +1,8 @@
+'use client';
+
 import { MainNavigation, NavigationItem } from '@/components/MainNavigation';
 
-import HomeSection from '@/containers/HomeSection';
+import { HomeSection } from '@/containers/HomeSection';
 
 export default function Home() {
   return (

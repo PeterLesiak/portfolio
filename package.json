@@ -4,7 +4,7 @@
   "license": "GPL-3.0-only",
   "scripts": {
     "build": "next build",
-    "start": "next start",
+    "start": "serve@latest out -p 6969",
     "dev": "next dev --turbo -p 6969",
     "lint": "next lint",
     "format": "prettier . --write"

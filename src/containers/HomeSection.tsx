@@ -18,15 +18,15 @@ const HomeSection = () => (
             'code in TypeScript',
             2500,
             'code in JavaScript',
-            500,
+            1000,
             'code in C++',
-            2500,
+            3500,
             'use Tailwind/CSS',
             2500,
-            'enjoy Web Dev',
-            3500,
+            'enjoy Web Dev <3',
+            4000,
           ]}
-          speed={1}
+          speed={25}
           repeat={Infinity}
         />
       </p>
@@ -34,4 +34,4 @@ const HomeSection = () => (
   </main>
 );
 
-export default HomeSection;
+export { HomeSection };
