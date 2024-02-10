@@ -9,9 +9,12 @@ const FullscreenCanvas = () => {
 
   useEffect(() => {
     const renderer = new GFX.WebGLRenderer(canvasRef.current);
+    const camera = new GFX.PerspectiveCamera();
+
+    const cube = new GFX.Mesh(new GFX.CubeGeometry(), new GFX.BasicMaterial());
 
     function update() {
-      renderer.render();
+      renderer.render(cube, camera);
 
       requestAnimationFrame(update);
     }
