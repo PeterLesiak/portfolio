@@ -10,7 +10,7 @@ const NavigationContainer = (props: { children: React.ReactElement[] }) => {
 
   return (
     <nav
-      className={`absolute z-50 flex w-full items-start justify-between bg-primary px-8 py-4 md:justify-center ${
+      className={`absolute z-50 flex w-full items-start justify-between px-8 py-4 backdrop-brightness-50 md:justify-center ${
         isOpen
           ? 'border-b after:absolute after:left-0 after:top-full after:h-1 after:w-full after:bg-white after:blur-xl'
           : ''
