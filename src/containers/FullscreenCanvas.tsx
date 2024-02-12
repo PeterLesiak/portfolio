@@ -4,6 +4,212 @@ import { useRef, useEffect } from 'react';
 
 import * as GL from '@/components/WebGL';
 
+const glslShader = `// https://www.shadertoy.com/view/Ms2SD1
+/*
+ * "Seascape" by Alexander Alekseev aka TDM - 2014
+ * License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ * Contact: tdmaav@gmail.com
+ */
+
+const int NUM_STEPS = 8;
+const float PI	 	= 3.141592;
+const float EPSILON	= 1e-3;
+#define EPSILON_NRM (0.1 / iResolution.x)
+//#define AA
+
+// sea
+const int ITER_GEOMETRY = 3;
+const int ITER_FRAGMENT = 5;
+const float SEA_HEIGHT = 0.6;
+const float SEA_CHOPPY = 4.0;
+const float SEA_SPEED = 0.8;
+const float SEA_FREQ = 0.16;
+const vec3 SEA_BASE = vec3(0.0,0.09,0.18);
+const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
+#define SEA_TIME (1.0 + iTime * SEA_SPEED)
+const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
+
+// math
+mat3 fromEuler(vec3 ang) {
+	vec2 a1 = vec2(sin(ang.x),cos(ang.x));
+    vec2 a2 = vec2(sin(ang.y),cos(ang.y));
+    vec2 a3 = vec2(sin(ang.z),cos(ang.z));
+    mat3 m;
+    m[0] = vec3(a1.y*a3.y+a1.x*a2.x*a3.x,a1.y*a2.x*a3.x+a3.y*a1.x,-a2.y*a3.x);
+	m[1] = vec3(-a2.y*a1.x,a1.y*a2.y,a2.x);
+	m[2] = vec3(a3.y*a1.x*a2.x+a1.y*a3.x,a1.x*a3.x-a1.y*a3.y*a2.x,a2.y*a3.y);
+	return m;
+}
+float hash( vec2 p ) {
+	float h = dot(p,vec2(127.1,311.7));	
+    return fract(sin(h)*43758.5453123);
+}
+float noise( in vec2 p ) {
+    vec2 i = floor( p );
+    vec2 f = fract( p );	
+	vec2 u = f*f*(3.0-2.0*f);
+    return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), 
+                     hash( i + vec2(1.0,0.0) ), u.x),
+                mix( hash( i + vec2(0.0,1.0) ), 
+                     hash( i + vec2(1.0,1.0) ), u.x), u.y);
+}
+
+// lighting
+float diffuse(vec3 n,vec3 l,float p) {
+    return pow(dot(n,l) * 0.4 + 0.6,p);
+}
+float specular(vec3 n,vec3 l,vec3 e,float s) {    
+    float nrm = (s + 8.0) / (PI * 8.0);
+    return pow(max(dot(reflect(e,n),l),0.0),s) * nrm;
+}
+
+// sky
+vec3 getSkyColor(vec3 e) {
+    e.y = (max(e.y,0.0)*0.8+0.2)*0.8;
+    return vec3(pow(1.0-e.y,2.0), 1.0-e.y, 0.6+(1.0-e.y)*0.4) * 0.7;
+}
+
+// sea
+float sea_octave(vec2 uv, float choppy) {
+    uv += noise(uv);        
+    vec2 wv = 1.0-abs(sin(uv));
+    vec2 swv = abs(cos(uv));    
+    wv = mix(wv,swv,wv);
+    return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
+}
+
+float map(vec3 p) {
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    vec2 uv = p.xz; uv.x *= 0.75;
+    
+    float d, h = 0.0;    
+    for(int i = 0; i < ITER_GEOMETRY; i++) {        
+    	d = sea_octave((uv+SEA_TIME)*freq,choppy);
+    	d += sea_octave((uv-SEA_TIME)*freq,choppy);
+        h += d * amp;        
+    	uv *= octave_m; freq *= 1.9; amp *= 0.22;
+        choppy = mix(choppy,1.0,0.2);
+    }
+    return p.y - h;
+}
+
+float map_detailed(vec3 p) {
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    vec2 uv = p.xz; uv.x *= 0.75;
+    
+    float d, h = 0.0;    
+    for(int i = 0; i < ITER_FRAGMENT; i++) {        
+    	d = sea_octave((uv+SEA_TIME)*freq,choppy);
+    	d += sea_octave((uv-SEA_TIME)*freq,choppy);
+        h += d * amp;        
+    	uv *= octave_m; freq *= 1.9; amp *= 0.22;
+        choppy = mix(choppy,1.0,0.2);
+    }
+    return p.y - h;
+}
+
+vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {  
+    float fresnel = clamp(1.0 - dot(n,-eye), 0.0, 1.0);
+    fresnel = min(pow(fresnel,3.0), 0.5);
+        
+    vec3 reflected = getSkyColor(reflect(eye,n));    
+    vec3 refracted = SEA_BASE + diffuse(n,l,80.0) * SEA_WATER_COLOR * 0.12; 
+    
+    vec3 color = mix(refracted,reflected,fresnel);
+    
+    float atten = max(1.0 - dot(dist,dist) * 0.001, 0.0);
+    color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
+    
+    color += vec3(specular(n,l,eye,60.0));
+    
+    return color;
+}
+
+// tracing
+vec3 getNormal(vec3 p, float eps) {
+    vec3 n;
+    n.y = map_detailed(p);    
+    n.x = map_detailed(vec3(p.x+eps,p.y,p.z)) - n.y;
+    n.z = map_detailed(vec3(p.x,p.y,p.z+eps)) - n.y;
+    n.y = eps;
+    return normalize(n);
+}
+
+float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {  
+    float tm = 0.0;
+    float tx = 1000.0;    
+    float hx = map(ori + dir * tx);
+    if(hx > 0.0) {
+        p = ori + dir * tx;
+        return tx;   
+    }
+    float hm = map(ori + dir * tm);    
+    float tmid = 0.0;
+    for(int i = 0; i < NUM_STEPS; i++) {
+        tmid = mix(tm,tx, hm/(hm-hx));                   
+        p = ori + dir * tmid;                   
+    	float hmid = map(p);
+		if(hmid < 0.0) {
+        	tx = tmid;
+            hx = hmid;
+        } else {
+            tm = tmid;
+            hm = hmid;
+        }
+    }
+    return tmid;
+}
+
+vec3 getPixel(in vec2 coord, float time) {    
+    vec2 uv = coord / iResolution.xy;
+    uv = uv * 2.0 - 1.0;
+    uv.x *= iResolution.x / iResolution.y;    
+        
+    // ray
+    vec3 ang = vec3(sin(time*3.0)*0.1,sin(time)*0.2+0.3,time);    
+    vec3 ori = vec3(0.0,3.5,time*5.0);
+    vec3 dir = normalize(vec3(uv.xy,-2.0)); dir.z += length(uv) * 0.05;
+    dir = normalize(dir) * fromEuler(ang);
+    
+    // tracing
+    vec3 p;
+    heightMapTracing(ori,dir,p);
+    vec3 dist = p - ori;
+    vec3 n = getNormal(p, dot(dist,dist) * EPSILON_NRM);
+    vec3 light = normalize(vec3(0.0,1.0,0.8)); 
+             
+    // color
+    return mix(
+        getSkyColor(dir),
+        getSeaColor(p,n,light,dir,dist),
+    	pow(smoothstep(0.0,-0.02,dir.y),0.2));
+}
+
+// main
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+    float time = iTime * 0.3 + (iMouse.x + iMouse.y)*0.01;
+	
+#ifdef AA
+    vec3 color = vec3(0.0);
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+        	vec2 uv = fragCoord+vec2(i,j)/3.0;
+    		color += getPixel(uv, time);
+        }
+    }
+    color /= 9.0;
+#else
+    vec3 color = getPixel(fragCoord, time);
+#endif
+    
+    // post
+	fragColor = vec4(pow(color,vec3(0.65)), 1.0);
+}`;
+
 const VERTEX_SOURCE = /*glsl*/ `#version 300 es
 in vec4 a_position;
 
@@ -14,72 +220,16 @@ void main() {
 const FRAGMENT_SOURCE = /*glsl*/ `#version 300 es
 precision mediump float;
 
-out vec4 fragColor;
+out vec4 uniqueFragColor;
 
 uniform vec2 iResolution;
 uniform float iTime;
+uniform vec4 iMouse;
 
-// Shader from https://www.shadertoy.com/view/Xd3SDs
-
-vec3 hash33(vec3 p){ 
-  float n = sin(dot(p, vec3(7, 157, 113)));    
-  return fract(vec3(2097152, 262144, 32768)*n); 
-}
-
-float map(vec3 p){
-  vec2 c;
-  p = abs(fract(p/3.)*3.-1.5);
-  c.x = min(max(p.x, p.y),min(max(p.y, p.z),max(p.x, p.z)))-0.75;
-  p = abs(fract(p*4./3.)*.75 - 0.375);
-  c.y = min(p.x,min(p.y,p.z)); // EQN 1
-  return max(abs(c.x), abs(c.y))*.75 + length(c)*.25 - .1;
-}
-
-vec3 calcNormal(in vec3 p, float d) {
-  const vec2 e = vec2(0.01, 0);
-  return normalize(vec3(d - map(p - e.xyy), d - map(p - e.yxy),	d - map(p - e.yyx)));
-}
+${glslShader}
 
 void main() {
-  vec2 fragCoord = gl_FragCoord.xy;
-	vec2 uv = (fragCoord.xy - iResolution.xy*.5 )/iResolution.y;
-  vec3 rd = normalize(vec3(uv, (1.-dot(uv, uv)*.5)*.5));
-  vec3 ro = vec3(0., 0., iTime*1.5), col=vec3(0), sp, sn, lp, ld, rnd;
-  vec2 a = sin(vec2(1.5707963, 0) + iTime*0.375);
-  rd.xz = mat2(a, -a.y, a.x)*rd.xz;    
-  rd.xy = mat2(a, -a.y, a.x)*rd.xy; 
-  lp = vec3(0, 1, 4);
-  lp.xz = mat2(a, -a.y, a.x)*lp.xz;    
-  lp.xy = mat2(a, -a.y, a.x)*lp.xy; 
-  lp += ro;
-  rnd = hash33(rd+311.);
-  float t = length(rnd)*.2, layers = 0., d, aD;
-  float lDist, s, l;
-  float thD = .0125;
-  for(float i=0.; i<64.; i++)	{
-    if(layers>31. || dot(col, vec3(.299, .587, .114)) > 1. || t>16.) break;
-    sp = ro+rd*t;
-    d = map(sp);
-    aD = (thD-abs(d)*31./32.)/thD;
-    if(aD>0.) {   
-      sn = calcNormal(sp, d)*sign(d);
-      ld = (lp - sp);
-      lDist = max(length(ld), .001);
-      ld /= lDist;
-      s = pow(max(dot(reflect(-ld, sn), -rd), 0.), 8.);
-      l = max(dot(ld, sn), 0.);
-      col += ((l + .1) + vec3(.5, .7, 1)*s)*aD/(1. + lDist*0.25 + lDist*lDist*0.05)*.2;
-      layers++;
-    }
-    t += max(abs(d)*.75, thD*.25);
-  }
-  t = min(t, 16.);
-  col = mix(col, vec3(0), 1.-exp(-0.025*t*t));
-  uv = abs(fragCoord.xy/iResolution.xy - .5);
-  col = mix(col, pow(min(vec3(1, 1.2, 1)*col.x, 1.), vec3(2.5, 1, 12)),
-  min( dot(pow(uv, vec2(4.)), vec2(1))*8., 1.));
-  col = mix(col, col.zxy, dot(sin(rd*5.), vec3(.166)) + 0.166);
-  fragColor = vec4( sqrt(clamp(col, 0., 1.)), 1.0 );
+  mainImage(uniqueFragColor, gl_FragCoord.xy);
 }`;
 
 const FullscreenCanvas = () => {
@@ -97,6 +247,7 @@ const FullscreenCanvas = () => {
 
     const resolutionUniformLocation = gl.getUniformLocation(program, 'iResolution');
     const timeUniformLocation = gl.getUniformLocation(program, 'iTime');
+    const mouseUniformLocation = gl.getUniformLocation(program, 'iMouse');
 
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -114,6 +265,15 @@ const FullscreenCanvas = () => {
 
     const startTime = new Date();
 
+    let mouse = { x: 0, y: 0 };
+
+    document.onmousemove = e => {
+      mouse = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+    };
+
     const update = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -130,6 +290,7 @@ const FullscreenCanvas = () => {
         timeUniformLocation,
         (new Date().getTime() - startTime.getTime()) / 1000,
       );
+      gl.uniform4fv(mouseUniformLocation, [mouse.x / 25, mouse.y / 25, 0, 0]);
 
       gl.bindVertexArray(vao);
 
