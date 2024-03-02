@@ -10,15 +10,13 @@ const NavigationContainer = (props: { children: React.ReactElement[] }) => {
 
   return (
     <nav
-      className={`absolute z-50 flex w-full items-start justify-between px-8 py-4 backdrop-brightness-50 md:justify-center ${
+      className={`absolute z-50 flex w-full items-start justify-between bg-blue-900 bg-opacity-5 px-8 py-4 backdrop-brightness-75 md:justify-center ${
         isOpen
           ? 'border-b after:absolute after:left-0 after:top-full after:h-1 after:w-full after:bg-white after:blur-xl'
           : ''
       }`}
     >
-      <div className={`flex ${isOpen ? 'flex-col' : 'hidden md:flex'}`}>
-        {props.children}
-      </div>
+      <div className={`flex ${isOpen ? 'flex-col' : 'hidden md:flex'}`}>{props.children}</div>
 
       <button onClick={() => setOpen(!isOpen)} className="ml-auto p-2 md:hidden">
         <Image

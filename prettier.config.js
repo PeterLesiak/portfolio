@@ -3,7 +3,7 @@ const Config = {
   plugins: ['prettier-plugin-tailwindcss'],
   arrowParens: 'avoid',
   singleQuote: true,
-  printWidth: 85,
+  printWidth: 95,
 };
 
 export default Config;
